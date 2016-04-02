@@ -1,6 +1,6 @@
 // Package gnupg implements GnuPG extensions to the OpenPGP (RFC 4880)
 // specification. It includes support for EdDSA (Ed25519) private keys and
-// gnu-dummy packets.
+// gnu-dummy packets; support for smart cards is in progress.
 //
 // There is a draft RFC that specifies EdDSA support in OpenPGP; this package
 // implements version 04 of that draft, which is the most current draft. See
