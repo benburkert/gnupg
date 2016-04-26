@@ -6,10 +6,10 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/agl/ed25519"
 	"github.com/benburkert/openpgp/algorithm"
 	"github.com/benburkert/openpgp/encoding"
 	"github.com/benburkert/openpgp/errors"
+	"golang.org/x/crypto/ed25519"
 )
 
 func init() {
@@ -49,12 +49,12 @@ func (pk publicKey) Decrypt(rand io.Reader, priv crypto.PrivateKey, fields []enc
 func (pk publicKey) Sign(rand io.Reader, priv crypto.PrivateKey, sigopt crypto.SignerOpts, msg []byte) ([]encoding.Field, error) {
 	switch pk {
 	case EdDSA:
-		eddsaPriv, ok := priv.([64]byte)
+		eddsaPriv, ok := priv.(ed25519.PrivateKey)
 		if !ok {
 			return nil, errors.InvalidArgumentError("cannot sign with wrong type of private key")
 		}
 
-		rs := ed25519.Sign(&eddsaPriv, msg)
+		rs := ed25519.Sign(eddsaPriv, msg)
 
 		return []encoding.Field{
 			encoding.NewMPI(rs[:32]),
@@ -68,7 +68,7 @@ func (pk publicKey) Sign(rand io.Reader, priv crypto.PrivateKey, sigopt crypto.S
 func (pk publicKey) Verify(pub crypto.PublicKey, sigopt crypto.SignerOpts, hashed []byte, sig []encoding.Field) error {
 	switch pk {
 	case EdDSA:
-		eddsapub, ok := pub.([32]byte)
+		eddsapub, ok := pub.(ed25519.PublicKey)
 		if !ok {
 			return errors.InvalidArgumentError("cannot verify signature with wrong type of public key")
 		}
@@ -79,11 +79,11 @@ func (pk publicKey) Verify(pub crypto.PublicKey, sigopt crypto.SignerOpts, hashe
 		sigR := sig[0].Bytes()
 		sigS := sig[1].Bytes()
 
-		eddsasig := [64]byte{}
+		eddsasig := make([]byte, ed25519.SignatureSize)
 		copy(eddsasig[:32], sigR)
 		copy(eddsasig[32:], sigS)
 
-		if !ed25519.Verify(&eddsapub, hashed, &eddsasig) {
+		if !ed25519.Verify(eddsapub, hashed, eddsasig) {
 			return errors.SignatureError("EdDSA verification failure")
 		}
 		return nil
@@ -97,8 +97,8 @@ func (pk publicKey) ParsePrivateKey(data []byte, pub crypto.PublicKey) (crypto.P
 
 	switch pk {
 	case EdDSA:
-		eddsaPub := pub.([32]byte)
-		eddsaPriv := [64]byte{}
+		eddsaPub := pub.(ed25519.PublicKey)
+		eddsaPriv := make(ed25519.PrivateKey, ed25519.PrivateKeySize)
 
 		d := new(encoding.MPI)
 		if _, err := d.ReadFrom(buf); err != nil {
@@ -134,7 +134,7 @@ func (pk publicKey) ParsePublicKey(r io.Reader) (crypto.PublicKey, []encoding.Fi
 			return nil, nil, errors.InvalidArgumentError("invalid EdDSA public key encoding")
 		}
 
-		eddsa := [32]byte{}
+		eddsa := make(ed25519.PublicKey, ed25519.PublicKeySize)
 		switch p.Bytes()[0] {
 		case 0x04:
 			// TODO: see _gcry_ecc_eddsa_ensure_compact in gcrypt
@@ -174,11 +174,12 @@ func (pk publicKey) ParseSignature(r io.Reader) ([]encoding.Field, error) {
 }
 
 func (pk publicKey) SerializePrivateKey(w io.Writer, priv crypto.PrivateKey) error {
-	eddsaPriv, ok := priv.([64]byte)
+	eddsaPriv, ok := priv.(ed25519.PrivateKey)
 	if !ok {
 		return errors.InvalidArgumentError("cannot serialize wrong type of private key")
 	}
 
-	_, err := encoding.NewMPI(eddsaPriv[:32]).WriteTo(w)
+	keySize := ed25519.PrivateKeySize - ed25519.PublicKeySize
+	_, err := encoding.NewMPI(eddsaPriv[:keySize]).WriteTo(w)
 	return err
 }
