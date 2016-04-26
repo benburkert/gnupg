@@ -4,3 +4,7 @@ go:
   - 1.6
   - tip
 script: "go test -v -race ./..."
+addons:
+  apt:
+    packages:
+      - gnupg2
