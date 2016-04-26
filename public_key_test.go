@@ -38,7 +38,7 @@ func TestSignature(t *testing.T) {
 
 	goodSig, ok := p.(*packet.Signature)
 	if !ok {
-		t.Fatal("failed to parse Signature: %#v", p)
+		t.Fatalf("failed to parse Signature: %#v", p)
 	}
 
 	h := goodSig.Hash.New()
@@ -72,7 +72,7 @@ func TestSignature(t *testing.T) {
 
 	sig, ok = p.(*packet.Signature)
 	if !ok {
-		t.Fatal("failed to reparse Signature: %#v", p)
+		t.Fatalf("failed to reparse Signature: %#v", p)
 	}
 
 	h.Reset()
@@ -175,10 +175,10 @@ func testKey(t *testing.T) *packet.PrivateKey {
 
 	privKey, ok := p.(*packet.PrivateKey)
 	if !ok {
-		t.Fatal("failed to parse PrivateKey: %#v", p)
+		t.Fatalf("failed to parse PrivateKey: %#v", p)
 	}
 	if err := privKey.Decrypt([]byte(privKeyPassphrase)); err != nil {
-		t.Fatal("failed to decrypt: %s", err)
+		t.Fatalf("failed to decrypt: %s", err)
 	}
 	return privKey
 
